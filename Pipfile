@@ -4,9 +4,14 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+python-dotenv = "*"
+"discord.py" = "*"
+pycord = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.11"
 python_full_version = "3.11.2"
+
+[pipenv]
