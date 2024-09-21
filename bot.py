@@ -3,6 +3,7 @@ import re
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+from typing import List
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -30,15 +31,16 @@ class MyClient(commands.Bot):
                             u"\uFE0F"                # Variation Selectors
                             u"\u3030"                # Wavy Dash
                             "]+", flags=re.UNICODE)
-    
+
     def _remove_emojis(self, str):
         return self.emoji_pattern.sub(r'', str)
     
     def _get_emojis(self, str):
         return self.emoji_pattern.findall(str)
     
-    async def update_member(self, member: discord.Member):
-        print(f'Updating {member.display_name}')
+    async def update_member(self, member: discord.Member, **kwargs):
+        tabs = kwargs.get("tabs", "")
+        print(f'{tabs}Updating {member.display_name}')
         new_nickname = self._remove_emojis(member.display_name).strip() + ' '
         
         roles = member.roles
@@ -53,19 +55,20 @@ class MyClient(commands.Bot):
         if new_nickname != member.display_name:
             try:
                 await member.edit(nick=new_nickname)
+                print(f"{tabs}    Name updated to {new_nickname}")
             except Exception as e:
-                print(f"Couldn't change nickname for {member.name}: {e}")
+                print(f"{tabs}    ERROR: Couldn't change nickname for {member.name}: {e}")
         else:
-            print("Member's nickname is already up to date")
+            print(f"{tabs}    Member's nickname is already up to date")
     
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         await self.update_member(after)
 
     async def update_all(self, ctx):
-        print('Running update on all members')
+        print('Running update on all members:')
         member_list = ctx.guild.members
         for member in member_list:
-            await self.update_member(member)
+            await self.update_member(member, tabs='    ')
             
 
 intents = discord.Intents.default()
@@ -73,4 +76,20 @@ intents.message_content = True
 intents.members = True
     
 bot = MyClient(command_prefix='!', intents=intents)
+
+@bot.command(name="update-all", description="Update all user's rolemojis (WARNING: This will remove all existing emojis from all user's names).")
+async def update_all(ctx: commands.context.Context):
+    print("Running command {}", ctx.bot)
+    await ctx.bot.update_all(ctx)
+
+@bot.command(name="users", description="")
+async def users(ctx: commands.context.Context, role: discord.Role):
+    message = f"All users with role {role.mention}:"
+    members: List[discord.Member] = role.members
+    members.sort(key=lambda a: a.nick)
+    for member in members:
+        message += f"\n- {member.mention}"
+    await ctx.send(content=message)
+
+
 bot.run(TOKEN)
