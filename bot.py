@@ -86,7 +86,7 @@ async def update_all(ctx: commands.context.Context):
 async def users(ctx: commands.context.Context, role: discord.Role):
     message = f"All users with role {role.mention}:"
     members: List[discord.Member] = role.members
-    members.sort(key=lambda a: a.nick)
+    members.sort(key=lambda a: a.nick or a.name)
     for member in members:
         message += f"\n- {member.mention}"
     await ctx.send(content=message)
