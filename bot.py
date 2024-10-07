@@ -8,7 +8,6 @@ from typing import List
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-
 class MyClient(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -60,7 +59,7 @@ class MyClient(commands.Bot):
                 print(f"{tabs}    ERROR: Couldn't change nickname for {member.name}: {e}")
         else:
             print(f"{tabs}    Member's nickname is already up to date")
-    
+
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         await self.update_member(after)
 
@@ -69,7 +68,7 @@ class MyClient(commands.Bot):
         member_list = ctx.guild.members
         for member in member_list:
             await self.update_member(member, tabs='    ')
-            
+
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -77,19 +76,35 @@ intents.members = True
     
 bot = MyClient(command_prefix='!', intents=intents)
 
+@bot.event
+async def on_ready():
+    print("Bot is up and ready!")
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} command(s): {synced}")
+    except Exception as e:
+        print(e)
+
+@bot.tree.command(name="users", description="It is my_command")
+async def test_command(interaction: discord.Interaction, role: discord.Role, print_for_everyone: bool=False):
+    members: List[discord.Member] = role.members
+    num_members = len(members)
+    message = ""
+    
+    if num_members == 0:
+        message = f"There are no members with role {role.mention}."
+    elif num_members == 1:
+        message = f"{members[0].mention} is the only member of {role.mention}."
+    else:
+        members.sort(key=lambda a: a.nick or a.name)
+        message = f"Here are all {len(members)} users with role {role.mention}:"
+        for member in members:
+            message += f"\n- {member.mention}"
+    await interaction.response.send_message(message, ephemeral=(not print_for_everyone))
+
 @bot.command(name="update-all", description="Update all user's rolemojis (WARNING: This will remove all existing emojis from all user's names).")
 async def update_all(ctx: commands.context.Context):
     print("Running command {}", ctx.bot)
     await ctx.bot.update_all(ctx)
-
-@bot.command(name="users", description="")
-async def users(ctx: commands.context.Context, role: discord.Role):
-    message = f"All users with role {role.mention}:"
-    members: List[discord.Member] = role.members
-    members.sort(key=lambda a: a.nick or a.name)
-    for member in members:
-        message += f"\n- {member.mention}"
-    await ctx.send(content=message)
-
 
 bot.run(TOKEN)
