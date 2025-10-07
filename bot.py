@@ -7,6 +7,7 @@ from typing import List
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+YOUR_ID = os.getenv('YOUR_DISCORD_ID')
 
 class MyClient(commands.Bot):
     def __init__(self, *args, **kwargs):
@@ -78,15 +79,48 @@ bot = MyClient(command_prefix='!', intents=intents)
 
 @bot.event
 async def on_ready():
+    bot.remove_command("first_slash")
+    bot.tree.remove_command("first_slash")
     print("Bot is up and ready!")
+    for com in bot.commands:
+        print(com.qualified_name)
+    for com in bot.tree.get_commands():
+        print(com.name)
     try:
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} command(s): {synced}")
     except Exception as e:
         print(e)
 
-@bot.tree.command(name="users", description="It is my_command")
-async def test_command(interaction: discord.Interaction, role: discord.Role, print_for_everyone: bool=False):
+@bot.tree.command(name='sync', description='Owner only')
+async def sync(interaction: discord.Interaction):
+    print(interaction.user.id)
+    if interaction.user.id == YOUR_ID:
+        for com in bot.commands:
+            print(com.qualified_name)
+        for com in bot.tree.get_commands():
+            print(com.name)
+        try:
+            synced = await bot.tree.sync()
+            print(f"Synced {len(synced)} command(s): {synced}")
+        except Exception as e:
+            print(e)
+    else:
+        await interaction.response.send_message('You must be the owner to use this command!')
+
+@bot.tree.command(name="users", description="List the members belonging to a role")
+async def role_users(interaction: discord.Interaction,
+                     role: discord.Role,
+                     print_for_everyone: bool = False):
+    """List the members belonging to a role
+
+    Parameters
+    ----------
+    role: discord.Role
+        The role to list (i.e. @Mods)
+    print_for_everyone: bool
+        Print so all users in the channel can see (default: False)
+    """
     members: List[discord.Member] = role.members
     num_members = len(members)
     message = ""
@@ -102,7 +136,7 @@ async def test_command(interaction: discord.Interaction, role: discord.Role, pri
             message += f"\n- {member.mention}"
     await interaction.response.send_message(message, ephemeral=(not print_for_everyone))
 
-@bot.command(name="update-all", description="Update all user's rolemojis (WARNING: This will remove all existing emojis from all user's names).")
+@bot.tree.command(name="update-all", description="Update all user's rolemojis (WARNING: This will remove all existing emojis from all user's names).")
 async def update_all(ctx: commands.context.Context):
     print("Running command {}", ctx.bot)
     await ctx.bot.update_all(ctx)
